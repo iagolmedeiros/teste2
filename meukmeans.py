@@ -1,0 +1,54 @@
+import numpy as np
+import pandas as pd
+from matplotlib import pyplot as plt
+from sklearn.datasets.samples_generator import make_blobs
+from sklearn.cluster import KMeans
+
+X, y = make_blobs(n_samples=300, centers=4, cluster_std=0.60, random_state=0)
+plt.scatter(X[:,0], X[:,1])
+#plt.show()
+
+wcss = [] #WCSS or within cluster sum of squares or inertia = sum of the squared distance between each member of the cluster and its centroid (we have to minimize)
+for i in range(1, 11):
+    kmeans = KMeans(n_clusters=i, init='k-means++', max_iter=300, n_init=10, random_state=0)
+    kmeans.fit(X)
+    wcss.append(kmeans.inertia_)
+plt.plot(range(1, 11), wcss)
+plt.title('Elbow Method')  #Function where the change in WCSS begins to level off.
+plt.xlabel('Number of clusters')
+plt.ylabel('WCSS')
+#plt.show()
+
+kmeans = KMeans(n_clusters=4, init='k-means++', max_iter=300, n_init=10, random_state=0)
+pred_y = kmeans.fit_predict(X)
+labels = kmeans.predict(X)
+
+#print(kmeans.cluster_centers_[:, 0])
+#print(kmeans.cluster_centers_[:, 1])
+#print(np.array(kmeans.cluster_centers_)) #um eh eixo Y, outro eh eixo X
+cluster_centers = np.array(kmeans.cluster_centers_)
+#print a
+f = open("centroids.txt", "w")
+f.write(str(cluster_centers.size))
+f.close()
+
+#print (a.size/2)
+for i in range(4):
+    for j in range(2):
+        print cluster_centers[i,j]
+
+'''print a[0,0]
+print a[0,1]
+print a[1,0]
+print a[1,1]
+print a[2,0]
+print a[2,1]
+
+#for i in a:
+#    print(i)
+#    print ("----")
+'''
+
+plt.scatter(X[:,0], X[:,1])
+plt.scatter(kmeans.cluster_centers_[:, 0], kmeans.cluster_centers_[:, 1], s=300, c='red')
+#plt.show()
