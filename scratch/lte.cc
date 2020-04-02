@@ -312,7 +312,7 @@ int main(int argc, char* argv[])
 
 
     for (uint32_t i = 0; i < ueNodes.GetN(); ++i) {
-        // request_video(ueNodes.Get(i), remoteHost);
+        request_video(ueNodes.Get(i), remoteHost);
     }
 
     AnimationInterface animator("lte.xml");
