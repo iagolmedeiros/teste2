@@ -1,12 +1,10 @@
 import numpy as np
-import pandas as pd
-from matplotlib import pyplot as plt
-from sklearn.datasets.samples_generator import make_blobs
-from sklearn.cluster import KMeans
+from sklearn.cluster import *
 
-X, y = make_blobs(n_samples=300, centers=4, cluster_std=0.60, random_state=0)
-plt.scatter(X[:,0], X[:,1])
-#plt.show()
+with open("positions.txt") as f:
+    lines = [float(k) for k in [i.split() for i in f.readlines()]]
+    print(lines)
+    input()
 
 wcss = [] #WCSS or within cluster sum of squares or inertia = sum of the squared distance between each member of the cluster and its centroid (we have to minimize)
 for i in range(1, 11):

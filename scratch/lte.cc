@@ -42,6 +42,8 @@ video quality
 energy use
 */
 
+std::string exec(const char* cmd);
+
 void print_position(NodeContainer ueNodes)
 {
     std::cout << '\n';
@@ -53,17 +55,15 @@ void print_position(NodeContainer ueNodes)
     }
 }
 
-// initialize drones position
-void set_drones(NodeContainer drones) {
-    std::default_random_engine generator;
-    std::uniform_real_distribution<double> distribution(0,200);
-    
-    for (uint32_t i = 0; i < drones.GetN(); ++i) {
-        Ptr<MobilityModel> mob = drones.Get(i)->GetObject<MobilityModel>();
-        mob->SetPosition(Vector(distribution(generator), distribution(generator), distribution(generator)));
+void save_user_postions(NodeContainer nodes) {
+    std::ofstream pos_file("positions.txt");
+    for (uint32_t i = 0; i < nodes.GetN(); ++i) {
+        Ptr<MobilityModel> mob = nodes.Get(i)->GetObject<MobilityModel>();
+        Vector pos = mob->GetPosition();
+        pos_file << pos.x << " " << pos.y << " " << pos.z << "\n";
     }
+    pos_file.close();
 }
-
 
 // move node "smoothly" towards the given position
 void move_drones(Ptr<Node> drone, Vector position, double n_vel) {
@@ -95,6 +95,47 @@ void move_drones(Ptr<Node> drone, Vector position, double n_vel) {
     }
     LOG("drone arrived at " << Simulator::Now().GetSeconds());
 }
+
+std::vector<std::vector<double>> get_cluster_centers() {
+    std::ifstream infile("centers.txt");
+    std::vector<std::vector<double>> centers;
+    double x, y, z;
+    while (infile >> x >> y >> z) {
+        std::vector<double> tmp;
+        tmp.push_back(x);
+        tmp.push_back(y);
+        tmp.push_back(z);
+        centers.push_back(tmp);
+    }
+    infile.close();
+    return centers;
+}
+
+void send_drones_to_cluster_centers(NodeContainer nodes, NodeContainer drones) {
+    save_user_postions(nodes);
+    exec("python3 clustering.py");
+    std::vector<std::vector<double>> centers = get_cluster_centers();
+
+    int counter = 0;
+    for(auto&& x: centers) {
+        move_drones(drones.Get(counter), Vector(x[0], x[1], x[2]), 20);
+        counter++;
+    }
+
+    Simulator::Schedule(Seconds(1), &send_drones_to_cluster_centers, nodes, drones);
+}
+
+// initialize drones position
+void set_drones(NodeContainer drones) {
+    std::default_random_engine generator;
+    std::uniform_real_distribution<double> distribution(0,200);
+    
+    for (uint32_t i = 0; i < drones.GetN(); ++i) {
+        Ptr<MobilityModel> mob = drones.Get(i)->GetObject<MobilityModel>();
+        mob->SetPosition(Vector(distribution(generator), distribution(generator), distribution(generator)));
+    }
+}
+
 
 std::string exec(const char* cmd)
 {
@@ -163,7 +204,7 @@ int main(int argc, char* argv[])
 {
     bool useCa = false;
     uint32_t numEnb = 3;
-    uint32_t numUes = 3;
+    uint32_t numUes = 30;
     uint32_t seedValue = 10000;
     uint32_t SimTime = 30;
     int eNodeBTxPower = 46;
@@ -192,6 +233,7 @@ int main(int argc, char* argv[])
     Ptr<LteHelper> lteHelper = CreateObject<LteHelper>();
     Ptr<PointToPointEpcHelper> epcHelper = CreateObject<PointToPointEpcHelper>();
     lteHelper->SetEpcHelper(epcHelper);
+    Config::SetDefault("ns3::LteEnbRrc::SrsPeriodicity", UintegerValue(320));
 
     Ptr<Node> pgw = epcHelper->GetPgwNode();
 
@@ -226,7 +268,7 @@ int main(int argc, char* argv[])
     ueNodes.Create(numUes);
 
     internet.Install(ueNodes);
-
+    
     MobilityHelper mobility;
     mobility.SetMobilityModel("ns3::ConstantPositionMobilityModel");
     MobilityHelper enb_mobility;
@@ -268,8 +310,9 @@ int main(int argc, char* argv[])
     Config::SetDefault("ns3::LteEnbPhy::TxPower", DoubleValue(eNodeBTxPower));
     Config::SetDefault("ns3::LteEnbPhy::NoiseFigure", DoubleValue(5)); // Default 5
 
+
     for (uint32_t i = 0; i < ueNodes.GetN(); ++i) {
-        request_video(ueNodes.Get(i), remoteHost);
+        // request_video(ueNodes.Get(i), remoteHost);
     }
 
     AnimationInterface animator("lte.xml");
@@ -309,14 +352,13 @@ int main(int argc, char* argv[])
     }
 
     Simulator::Schedule(Seconds(1), ThroughputMonitor, &flowHelper, flowMonitor);
+    Simulator::Schedule(Seconds(1), &send_drones_to_cluster_centers, ueNodes, enbNodes);
 
     // set initial positions of drones
     set_drones(enbNodes);
 
-    // send drones to a test location
-    Simulator::Schedule(Seconds(1), &move_drones, enbNodes.Get(0), Vector(0,50,20), 50);
-    Simulator::Schedule(Seconds(1), &move_drones, enbNodes.Get(1), Vector(50,0,20), 50);
-    Simulator::Schedule(Seconds(1), &move_drones, enbNodes.Get(2), Vector(50,50,20), 50);
+    // save user positions to file
+    save_user_postions(ueNodes);
 
     Simulator::Run();
     flowMonitor->SerializeToXmlFile("lte_flow_monitor.xml", true, true);
