@@ -4,6 +4,7 @@
 #include <memory>
 #include <fstream>
 #include <random>
+#include <vector>
 
 #include "ns3/core-module.h"
 #include "ns3/point-to-point-helper.h"
@@ -42,7 +43,24 @@ video quality
 energy use
 */
 
+std::vector<double> ues_sinr;
+std::ofstream ues_sinr_file;
+
 std::string exec(const char* cmd);
+
+void ns3::PhyStatsCalculator::ReportUeSinr(uint16_t cellId, uint64_t imsi, uint16_t rnti, double sinrLinear, uint8_t componentCarrierId)
+{
+	double sinrdB = 10 * log(sinrLinear);
+	ues_sinr[imsi-1] = sinrdB;
+}
+
+void write_metrics(){
+	double time = (double)Simulator::Now().GetSeconds();
+	unsigned int qtyUEs = ues_sinr.size();
+	for(int id=0; id<qtyUEs; ++id)
+		ues_sinr_file << time << "," << id << "," << ues_sinr[id] << std::endl;
+	Simulator::Schedule(Seconds(1), &write_metrics);
+};
 
 void print_position(NodeContainer ueNodes)
 {
@@ -218,6 +236,8 @@ int main(int argc, char* argv[])
     CommandLine cmd;
     std::stringstream cmm;
     std::string GetClusterCoordinates;
+	//Open file for writing and overwrite if it already exists
+	ues_sinr_file.open("ues_sinr.txt", std::ofstream::out | std::ofstream::trunc);
 
     ConfigStore inputConfig;
     inputConfig.ConfigureDefaults();
@@ -234,6 +254,8 @@ int main(int argc, char* argv[])
         Config::SetDefault("ns3::LteHelper::NumberOfComponentCarriers", UintegerValue(2));
         Config::SetDefault("ns3::LteHelper::EnbComponentCarrierManager", StringValue("ns3::RrComponentCarrierManager"));
     }
+
+	ues_sinr.resize(numUes);
 
     Ptr<LteHelper> lteHelper = CreateObject<LteHelper>();
     Ptr<PointToPointEpcHelper> epcHelper = CreateObject<PointToPointEpcHelper>();
@@ -340,6 +362,8 @@ int main(int argc, char* argv[])
     lteHelper->EnableUlPhyTraces();
     lteHelper->EnableMacTraces();
 
+	Config::Connect ("/NodeList/*/DeviceList/*/LteUePhy/ReportUeSinr",MakeCallback (&ns3::PhyStatsCalculator::ReportUeSinr));
+
     Ptr<FlowMonitor> flowMonitor;
     FlowMonitorHelper flowHelper;
     flowMonitor = flowHelper.Install(ueNodes);
@@ -350,6 +374,7 @@ int main(int argc, char* argv[])
     //     Simulator::Schedule(Seconds(ib), &print_position, ueNodes);
     // }
 
+	Simulator::Schedule(Seconds(1), &write_metrics);
     Simulator::Schedule(Seconds(1), ThroughputMonitor, &flowHelper, flowMonitor);
     Simulator::Schedule(Seconds(1), &send_drones_to_cluster_centers, ueNodes, UAVNodes);
 
