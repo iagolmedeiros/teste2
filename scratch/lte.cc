@@ -208,7 +208,7 @@ void request_video(Ptr<Node> sender_node, Ptr<Node> receiver_node)
 int main(int argc, char* argv[])
 {
     bool useCa = false;
-    uint32_t numEnb = 3;
+    uint32_t numUAVs = 3;
     uint32_t numUes = 30;
     uint32_t seedValue = 10000;
     uint32_t SimTime = 30;
@@ -225,7 +225,7 @@ int main(int argc, char* argv[])
     LogComponentEnable("EvalvidClient", LOG_ALL);
 
     cmd.AddValue("useCa", "Whether to use carrier aggregation.", useCa);
-    cmd.AddValue("numEnb", "the radius of the disc where UEs are placed around an eNB", numEnb);
+    cmd.AddValue("numUAVs", "how many drones in the simulation", numUAVs);
     cmd.AddValue("numUes", "how many UEs are attached to each eNB", numUes);
     cmd.Parse(argc, argv);
 
@@ -267,21 +267,21 @@ int main(int argc, char* argv[])
     Ptr<Ipv4StaticRouting> remoteHostStaticRouting = ipv4RoutingHelper.GetStaticRouting(remoteHost->GetObject<Ipv4>());
     remoteHostStaticRouting->AddNetworkRouteTo(Ipv4Address("7.0.0.0"), Ipv4Mask("255.0.0.0"), 1);
 
-    NodeContainer enbNodes;
+    NodeContainer UAVNodes;
     NodeContainer ueNodes;
-    enbNodes.Create(numEnb);
+    UAVNodes.Create(numUAVs);
     ueNodes.Create(numUes);
 
     internet.Install(ueNodes);
     
     MobilityHelper mobility;
     mobility.SetMobilityModel("ns3::ConstantPositionMobilityModel");
-    MobilityHelper enb_mobility;
-    mobility.SetMobilityModel("ns3::ConstantVelocityMobilityModel");
+    MobilityHelper UAVmobility;
+    UAVmobility.SetMobilityModel("ns3::ConstantVelocityMobilityModel");
     mobility.Install(remoteHost);
     mobility.Install(pgw);
-    enb_mobility.Install(enbNodes);
-    BuildingsHelper::Install(enbNodes);
+    UAVmobility.Install(UAVNodes);
+    BuildingsHelper::Install(UAVNodes);
 
     ns3::RngSeedManager::SetSeed(seedValue); //valor de seed para geração de números aleatórios
     cmd.AddValue("seedValue", "random seed value.", seedValue);
@@ -304,7 +304,7 @@ int main(int argc, char* argv[])
         ueStaticRouting->SetDefaultRoute(epcHelper->GetUeDefaultGatewayAddress(), 1);
     }
 
-    enbDevs = lteHelper->InstallEnbDevice(enbNodes);
+    enbDevs = lteHelper->InstallEnbDevice(UAVNodes);
     ueDevs = lteHelper->InstallUeDevice(ueNodes);
 
     Ipv4InterfaceContainer ueIpIface;
@@ -322,9 +322,9 @@ int main(int argc, char* argv[])
 
     AnimationInterface animator("lte.xml");
     animator.SetMobilityPollInterval(Seconds(1));
-    for (uint32_t i = 0; i < enbNodes.GetN(); ++i) {
-        animator.UpdateNodeDescription(enbNodes.Get(i), "EnodeB" + i);
-        animator.UpdateNodeColor(enbNodes.Get(i), 250, 200, 45);
+    for (uint32_t i = 0; i < UAVNodes.GetN(); ++i) {
+        animator.UpdateNodeDescription(UAVNodes.Get(i), "EnodeB" + i);
+        animator.UpdateNodeColor(UAVNodes.Get(i), 250, 200, 45);
     }
     for (uint32_t j = 0; j < ueNodes.GetN(); ++j) {
         animator.UpdateNodeDescription(ueNodes.Get(j), "UE" + j);
@@ -351,10 +351,11 @@ int main(int argc, char* argv[])
     // }
 
     Simulator::Schedule(Seconds(1), ThroughputMonitor, &flowHelper, flowMonitor);
-    Simulator::Schedule(Seconds(1), &send_drones_to_cluster_centers, ueNodes, enbNodes);
+    Simulator::Schedule(Seconds(1), &send_drones_to_cluster_centers, ueNodes, UAVNodes);
 
     // set initial positions of drones
-    set_drones(enbNodes);
+    set_drones(UAVNodes);
+
     // save user positions to file
     save_user_postions(ueNodes);
 
