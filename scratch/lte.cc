@@ -155,7 +155,7 @@ void set_drones(NodeContainer drones) {
     
     for (uint32_t i = 0; i < drones.GetN(); ++i) {
         Ptr<MobilityModel> mob = drones.Get(i)->GetObject<MobilityModel>();
-        mob->SetPosition(Vector(distribution(generator), distribution(generator), distribution(generator)));
+        mob->SetPosition(Vector(distribution(generator), distribution(generator), 35));
     }
 }
 
@@ -267,7 +267,15 @@ int main(int argc, char* argv[])
 
     Ptr<Node> pgw = epcHelper->GetPgwNode();
 
-    NodeContainer remoteHostContainer;
+	NS_LOG_UNCOND("Pathloss model: HybridBuildingsPropagationLossModel ");
+	Config::SetDefault("ns3::ItuR1411NlosOverRooftopPropagationLossModel::StreetsOrientation", DoubleValue (10));
+	lteHelper->SetAttribute ("PathlossModel", StringValue ("ns3::HybridBuildingsPropagationLossModel"));
+	lteHelper->SetPathlossModelAttribute ("Frequency", DoubleValue (2.0e9));
+	lteHelper->SetPathlossModelAttribute ("ShadowSigmaExtWalls", DoubleValue (0));
+	lteHelper->SetPathlossModelAttribute ("ShadowSigmaOutdoor", DoubleValue (3.0));
+	lteHelper->SetPathlossModelAttribute ("Los2NlosThr", DoubleValue (200));
+    
+	NodeContainer remoteHostContainer;
     remoteHostContainer.Create(node_remote);
     Ptr<Node> remoteHost = remoteHostContainer.Get(0);
 
@@ -301,16 +309,20 @@ int main(int argc, char* argv[])
     
     MobilityHelper mobility;
     mobility.SetMobilityModel("ns3::ConstantPositionMobilityModel");
-    MobilityHelper UAVmobility;
-    UAVmobility.SetMobilityModel("ns3::ConstantVelocityMobilityModel");
     mobility.Install(remoteHost);
     mobility.Install(pgw);
+	BuildingsHelper::Install (remoteHost);
+	BuildingsHelper::Install (pgw);
+    
+	MobilityHelper UAVmobility;
+    UAVmobility.SetMobilityModel("ns3::ConstantVelocityMobilityModel");
     UAVmobility.Install(UAVNodes);
     BuildingsHelper::Install(UAVNodes);
 
     mobility.SetPositionAllocator("ns3::RandomDiscPositionAllocator", //
-        "X", StringValue("100"), // The x coordinate of the center of the random position disc.
-        "Y", StringValue("100"), // The y coordinate of the center of the random position disc.
+        "X", DoubleValue(100), // The x coordinate of the center of the random position disc.
+        "Y", DoubleValue(100), // The y coordinate of the center of the random position disc.
+		"Z", DoubleValue(1.5), // The z coordinate of all positions in the disc.
         "Rho", StringValue("ns3::UniformRandomVariable[Min=0|Max=90]")); // A random variable which represents the radius of a position in a random disc.
 
     mobility.SetMobilityModel("ns3::RandomWalk2dMobilityModel",
@@ -384,6 +396,8 @@ int main(int argc, char* argv[])
 
     // save user positions to file
     save_user_postions(ueNodes);
+
+	BuildingsHelper::MakeMobilityModelConsistent ();
 
     Simulator::Run();
     flowMonitor->SerializeToXmlFile("lte_flow_monitor.xml", true, true);
