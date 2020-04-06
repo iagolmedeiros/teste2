@@ -247,9 +247,12 @@ int main(int argc, char* argv[])
     cmd.AddValue("useCa", "Whether to use carrier aggregation.", useCa);
     cmd.AddValue("numUAVs", "how many drones in the simulation", numUAVs);
     cmd.AddValue("numUes", "how many UEs are attached to each eNB", numUes);
+    cmd.AddValue("seedValue", "random seed value.", seedValue);
     cmd.Parse(argc, argv);
 
-    if (useCa) {
+    ns3::RngSeedManager::SetSeed(seedValue); //valor de seed para geração de números aleatórios
+    
+	if (useCa) {
         Config::SetDefault("ns3::LteHelper::UseCa", BooleanValue(useCa));
         Config::SetDefault("ns3::LteHelper::NumberOfComponentCarriers", UintegerValue(2));
         Config::SetDefault("ns3::LteHelper::EnbComponentCarrierManager", StringValue("ns3::RrComponentCarrierManager"));
@@ -305,8 +308,6 @@ int main(int argc, char* argv[])
     UAVmobility.Install(UAVNodes);
     BuildingsHelper::Install(UAVNodes);
 
-    ns3::RngSeedManager::SetSeed(seedValue); //valor de seed para geração de números aleatórios
-    cmd.AddValue("seedValue", "random seed value.", seedValue);
     mobility.SetPositionAllocator("ns3::RandomDiscPositionAllocator", //
         "X", StringValue("100"), // The x coordinate of the center of the random position disc.
         "Y", StringValue("100"), // The y coordinate of the center of the random position disc.
