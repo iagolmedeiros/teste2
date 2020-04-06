@@ -360,17 +360,17 @@ int main(int argc, char* argv[])
     for (uint32_t i = 0; i < UAVNodes.GetN(); ++i) {
         animator.UpdateNodeDescription(UAVNodes.Get(i), "UAV " + std::to_string(i));
         animator.UpdateNodeColor(UAVNodes.Get(i), 250, 200, 45);
-		animator.UpdateNodeSize(UAVNodes.Get(i)->GetId(),10,10); // to change the node size in the animation.
+		animator.UpdateNodeSize(UAVNodes.Get(i)->GetId(),4,4); // to change the node size in the animation.
     }
     for (uint32_t j = 0; j < ueNodes.GetN(); ++j) {
         animator.UpdateNodeDescription(ueNodes.Get(j), "UE " + std::to_string(j));
         animator.UpdateNodeColor(ueNodes.Get(j), 20, 10, 145);
-		animator.UpdateNodeSize(ueNodes.Get(j)->GetId(),10,10);
+		animator.UpdateNodeSize(ueNodes.Get(j)->GetId(),4,4);
     }
     for (uint32_t k = 0; k < remoteHostContainer.GetN(); ++k) {
         animator.UpdateNodeDescription(remoteHostContainer.Get(k), "RemoteHost " + std::to_string(k));
         animator.UpdateNodeColor(remoteHostContainer.Get(k), 110, 150, 45);
-		animator.UpdateNodeSize(remoteHostContainer.Get(k)->GetId(),10,10);
+		animator.UpdateNodeSize(remoteHostContainer.Get(k)->GetId(),4,4);
     }
 
     lteHelper->EnableTraces();
