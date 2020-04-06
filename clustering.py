@@ -6,7 +6,6 @@ with open("positions.txt") as f:
     for i, v in  enumerate(lines):
         lines[i] = [float(k) for k in v]
 
-
 kmeans = KMeans(n_clusters=3).fit(lines)
 print(kmeans.labels_)
 cluster_centers = np.array(kmeans.cluster_centers_)

@@ -112,16 +112,21 @@ std::vector<std::vector<double>> get_cluster_centers() {
 }
 
 void send_drones_to_cluster_centers(NodeContainer nodes, NodeContainer drones) {
+    // save user positions to file
     save_user_postions(nodes);
+    // generate custering file
     exec("python3 clustering.py");
+    // read cluster centers
     std::vector<std::vector<double>> centers = get_cluster_centers();
 
+    // iterate custer centers and send drones
     int counter = 0;
     for(auto&& x: centers) {
         move_drones(drones.Get(counter), Vector(x[0], x[1], x[2]), 20);
         counter++;
     }
 
+    // repeat
     Simulator::Schedule(Seconds(1), &send_drones_to_cluster_centers, nodes, drones);
 }
 
@@ -339,70 +344,63 @@ int main(int argc, char* argv[])
     FlowMonitorHelper flowHelper;
     flowMonitor = flowHelper.Install(ueNodes);
 
-    cmm << "python meumeanshift.py";
-    GetClusterCoordinates = exec(cmm.str().c_str());
-    if (!GetClusterCoordinates.empty()) {
-        std::cout << GetClusterCoordinates;
-    }
-
     Simulator::Stop(Seconds(SimTime));
 
-    for (uint32_t ib = 0; ib <= SimTime; ib++) {
-        Simulator::Schedule(Seconds(ib), &print_position, ueNodes);
-    }
+    // for (uint32_t ib = 0; ib <= SimTime; ib++) {
+    //     Simulator::Schedule(Seconds(ib), &print_position, ueNodes);
+    // }
 
     Simulator::Schedule(Seconds(1), ThroughputMonitor, &flowHelper, flowMonitor);
     Simulator::Schedule(Seconds(1), &send_drones_to_cluster_centers, ueNodes, enbNodes);
 
     // set initial positions of drones
     set_drones(enbNodes);
-
     // save user positions to file
     save_user_postions(ueNodes);
 
     Simulator::Run();
     flowMonitor->SerializeToXmlFile("lte_flow_monitor.xml", true, true);
 
-    std::ifstream inFile;
-    std::string x;
-    int quantidadeCentroids;
-    inFile.open("centroids.txt");
-    if (!inFile) {
-        std::cout << "Unable to open file";
-        exit(1); // terminate with error
-    }
-    while (inFile >> x) {
-        std::cout << "Quantidade de coordenadas totais: " << x << '\n';
-        quantidadeCentroids = std::stoi(x);
-    }
-    inFile.close();
+    // std::ifstream inFile;
+    // std::string x;
+    // int quantidadeCentroids;
+    // inFile.open("centroids.txt");
+    // if (!inFile) {
+    //     std::cout << "Unable to open file";
+    //     exit(1); // terminate with error
+    // }
+    // while (inFile >> x) {
+    //     std::cout << "Quantidade de coordenadas totais: " << x << '\n';
+    //     quantidadeCentroids = std::stoi(x);
+    // }
+    // inFile.close();
 
-    int indice = 0;
-    float vetorFloat[quantidadeCentroids] = { 0 };
+    // int indice = 0;
+    // float vetorFloat[quantidadeCentroids] = { 0 };
 
-    std::istringstream iss(GetClusterCoordinates);
-    std::string line;
-    while (std::getline(iss, line)) {
-        std::cout << "Teste " << line << std::endl;
-        vetorFloat[indice] = std::stof(line);
-        indice++;
-    }
+    // std::istringstream iss(GetClusterCoordinates);
+    // std::string line;
+    // while (std::getline(iss, line)) {
+    //     std::cout << "Teste " << line << std::endl;
+    //     vetorFloat[indice] = std::stof(line);
+    //     indice++;
+    // }
 
-    std::cout << "This is a message: " << vetorFloat[0] << " years old " << std::endl;
-    std::cout << "This is a message: " << vetorFloat[1] << " years old " << std::endl;
+    // std::cout << "This is a message: " << vetorFloat[0] << " years old " << std::endl;
+    // std::cout << "This is a message: " << vetorFloat[1] << " years old " << std::endl;
 
-    for (std::string::size_type i = 0; i < GetClusterCoordinates.length(); i++) {
-        if (GetClusterCoordinates[i] != '\n') // If the current char is not the end,
-        {
-            std::cout << GetClusterCoordinates[i];
-        }
-        else if (GetClusterCoordinates[i] == '\n') {
-            std::cout << std::endl;
-        }
-    }
+    // for (std::string::size_type i = 0; i < GetClusterCoordinates.length(); i++) {
+    //     if (GetClusterCoordinates[i] != '\n') // If the current char is not the end,
+    //     {
+    //         std::cout << GetClusterCoordinates[i];
+    //     }
+    //     else if (GetClusterCoordinates[i] == '\n') {
+    //         std::cout << std::endl;
+    //     }
+    // }
 
-    if (!GetClusterCoordinates.empty()) {
-    }
+    // if (!GetClusterCoordinates.empty()) {
+    // }
 
     Simulator::Destroy();
     return 0;

@@ -2,7 +2,7 @@
 
 if [ $1 == "c" ]
 then
-    rm Dl* Ul* evalvid* *pcap output
+    rm Dl* Ul* evalvid* *pcap output *txt *xml > /dev/null
 elif [ $1 == "r" ]
 then
     ./waf --run lte > output 2>&1
