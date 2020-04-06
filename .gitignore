@@ -1,6 +1,9 @@
 .vscode
 .waf*
-*o
+.lock-waf_*_build
+*.o
+*.pyc
+*.pyo
 build/
 Dl*
 Ul*
@@ -8,3 +11,4 @@ Ul*
 *pcap
 ouput*
 evalvid_*
+/*txt
