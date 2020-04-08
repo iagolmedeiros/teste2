@@ -391,6 +391,7 @@ int main(int argc, char* argv[])
 
     Ptr<FlowMonitor> flowMonitor;
     FlowMonitorHelper flowHelper;
+	flowHelper.Install(remoteHost);
     flowMonitor = flowHelper.Install(ueNodes);
 
     Simulator::Stop(Seconds(SimTime));
