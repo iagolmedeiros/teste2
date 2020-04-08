@@ -3,6 +3,7 @@
 #include <string>
 #include <memory>
 #include <fstream>
+#include <sstream>
 #include <random>
 #include <vector>
 
@@ -55,11 +56,19 @@ void ns3::PhyStatsCalculator::ReportUeSinr(uint16_t cellId, uint64_t imsi, uint1
 }
 
 void write_metrics(){
-	double time = (double)Simulator::Now().GetSeconds();
+	std::stringstream sinrdata;
 	unsigned int qtyUEs = ues_sinr.size();
-	for(int id=0; id<qtyUEs; ++id)
-		ues_sinr_file << time << "," << id << "," << ues_sinr[id] << std::endl;
-	Simulator::Schedule(Seconds(1), &write_metrics);
+	unsigned int qtyUEsCovered = 0;
+	float coverageRatio = 0;
+	for(unsigned int id=0; id<qtyUEs; ++id)
+	{
+		if(ues_sinr[id] >= 3)
+			qtyUEsCovered++;
+		sinrdata << "Id: "<< id << ", SINR: " << ues_sinr[id] << "dB" << std::endl;
+	}
+	coverageRatio = (float) qtyUEsCovered/qtyUEs;
+	ues_sinr_file << "Coverage ratio: " << coverageRatio * 100 << "%" << std::endl;
+	ues_sinr_file << sinrdata.str();
 };
 
 void print_position(NodeContainer ueNodes)
@@ -390,7 +399,7 @@ int main(int argc, char* argv[])
     //     Simulator::Schedule(Seconds(ib), &print_position, ueNodes);
     // }
 
-	Simulator::Schedule(Seconds(1), &write_metrics);
+	Simulator::Schedule(Seconds(SimTime-0.001), &write_metrics);
     Simulator::Schedule(Seconds(1), ThroughputMonitor, &flowHelper, flowMonitor);
     Simulator::Schedule(Seconds(1), &send_drones_to_cluster_centers, ueNodes, UAVNodes);
 
