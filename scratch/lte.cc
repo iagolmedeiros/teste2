@@ -5,6 +5,8 @@
 #include <fstream>
 #include <sstream>
 #include <random>
+#include <list>
+#include <limits>
 #include <vector>
 
 #include "ns3/core-module.h"
@@ -94,48 +96,66 @@ void save_user_postions(NodeContainer nodes) {
 
 // move node "smoothly" towards the given position
 void move_drones(Ptr<Node> drone, Vector position, double n_vel) {
-    double interval = 0.1;
-    double new_n_vel = interval * n_vel;
-
-    // get mobility model for drone
-    Ptr<MobilityModel> mob = drone->GetObject<MobilityModel>();
+	// get mobility model for drone
+    Ptr<WaypointMobilityModel> mob = drone->GetObject<WaypointMobilityModel>();
     Vector m_position = mob->GetPosition();
     double distance = CalculateDistance(position, m_position);
+	// 1 meter of accuracy is acceptable
+	if(distance <= 1)
+		return;
 
-    // 1meter of accuracy is acceptable
-    if(distance > 1) {
-        Vector diff = position - m_position;
+	unsigned int nodeId = drone->GetId();
+	double currentTime = Simulator::Now().GetSeconds();
+	double nWaypointTime;
+	LOG("moving drone with nodeId: " << nodeId << " from " << m_position << " to " << position << " time: " << currentTime);
 
-        double len = diff.GetLength();
-        Vector new_pos = m_position + Vector((diff.x / len) * new_n_vel, 
-                                             (diff.y / len) * new_n_vel,
-                                             (diff.z / len) * new_n_vel);
-        // making sure not to overshoot
-        if (CalculateDistance(new_pos, position) > CalculateDistance(position, m_position)) {
-            new_pos = position;
-            return;
-        }
+	if(mob->GetVelocity().GetLength() > 0){
+		mob->EndMobility();
+		mob->AddWaypoint(Waypoint(Simulator::Now(), m_position));
+	}
 
-        mob->SetPosition(new_pos);
-        Simulator::Schedule(Seconds(interval), &move_drones, drone, position, n_vel);
-        return;
-    }
-    LOG("drone arrived at " << Simulator::Now().GetSeconds());
+	nWaypointTime = distance/n_vel + currentTime;
+	mob->AddWaypoint(Waypoint(Seconds(nWaypointTime), position));
+
 }
 
-std::vector<std::vector<double>> get_cluster_centers() {
+std::list<Vector> get_cluster_centers() {
     std::ifstream infile("centers.txt");
-    std::vector<std::vector<double>> centers;
+    std::list<Vector> centers;
     double x, y, z;
     while (infile >> x >> y >> z) {
-        std::vector<double> tmp;
-        tmp.push_back(x);
-        tmp.push_back(y);
-        tmp.push_back(z);
+        Vector tmp = {x, y, 35};
         centers.push_back(tmp);
     }
     infile.close();
     return centers;
+}
+
+Vector closest_center(Ptr<Node> drone, std::list<Vector> centers){
+	double min = numeric_limits<double>::infinity();
+	double distance;
+	Vector drone_position = drone->GetObject<MobilityModel>()->GetPosition();
+	Vector closest;
+	for(auto&& center_position: centers) {
+		distance = CalculateDistance(drone_position, center_position);
+		if(distance < min){
+			min = distance;
+			closest = center_position;
+		}
+	}
+	return closest;
+}
+
+std::list<Vector>::iterator find_center(Vector center, std::list<Vector>& centers){
+	std::list<Vector>::iterator position;
+	for(position = centers.begin(); position != centers.end(); ++position) {
+		if(position->x == center.x &&
+			position->y == center.y &&
+			position->z == center.z){
+			break;
+		}
+	}
+	return position;
 }
 
 void send_drones_to_cluster_centers(NodeContainer nodes, NodeContainer drones) {
@@ -144,13 +164,17 @@ void send_drones_to_cluster_centers(NodeContainer nodes, NodeContainer drones) {
     // generate custering file
     exec("python3 clustering.py");
     // read cluster centers
-    std::vector<std::vector<double>> centers = get_cluster_centers();
+    std::list<Vector> centers = get_cluster_centers();
+	Vector center;
+	std::list<Vector>::iterator erase_position;
 
     // iterate custer centers and send drones
-    int counter = 0;
-    for(auto&& x: centers) {
-        move_drones(drones.Get(counter), Vector(x[0], x[1], x[2]), 20);
-        counter++;
+    NodeContainer::Iterator drone;
+    for(drone = drones.Begin(); drone != drones.End(); ++drone) {
+		center = closest_center(*drone, centers);
+		erase_position = find_center(center, centers);
+		centers.erase(erase_position);
+        move_drones(*drone, center, 20);
     }
 
     // repeat
@@ -161,10 +185,10 @@ void send_drones_to_cluster_centers(NodeContainer nodes, NodeContainer drones) {
 void set_drones(NodeContainer drones) {
     std::default_random_engine generator;
     std::uniform_real_distribution<double> distribution(0,200);
-    
+
     for (uint32_t i = 0; i < drones.GetN(); ++i) {
-        Ptr<MobilityModel> mob = drones.Get(i)->GetObject<MobilityModel>();
-        mob->SetPosition(Vector(distribution(generator), distribution(generator), 35));
+        Ptr<WaypointMobilityModel> mob = drones.Get(i)->GetObject<WaypointMobilityModel>();
+		mob->AddWaypoint(Waypoint(Simulator::Now(), Vector(distribution(generator), distribution(generator), 35)));
     }
 }
 
@@ -324,7 +348,7 @@ int main(int argc, char* argv[])
 	BuildingsHelper::Install (pgw);
     
 	MobilityHelper UAVmobility;
-    UAVmobility.SetMobilityModel("ns3::ConstantVelocityMobilityModel");
+    UAVmobility.SetMobilityModel("ns3::WaypointMobilityModel");
     UAVmobility.Install(UAVNodes);
     BuildingsHelper::Install(UAVNodes);
 
