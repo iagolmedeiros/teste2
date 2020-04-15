@@ -170,7 +170,7 @@ void send_drones_to_cluster_centers(NodeContainer nodes, NodeContainer drones) {
 
     // iterate custer centers and send drones
     NodeContainer::Iterator drone;
-    for(drone = drones.Begin(); drone != drones.End(); ++drone) {
+    for(drone = drones.Begin(); drone != drones.End() && centers.size() > 0; ++drone) {
 		center = closest_center(*drone, centers);
 		erase_position = find_center(center, centers);
 		centers.erase(erase_position);
