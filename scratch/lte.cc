@@ -7,6 +7,7 @@
 #include <random>
 #include <list>
 #include <limits>
+#include <unordered_map>
 #include <vector>
 
 #include "ns3/core-module.h"
@@ -48,6 +49,9 @@ energy use
 
 std::vector<double> ues_sinr;
 std::ofstream ues_sinr_file;
+std::vector<double> time_to_centroid;
+std::ofstream time_to_centroid_file;
+unsigned int active_drones = 0;
 
 std::string exec(const char* cmd);
 
@@ -55,6 +59,31 @@ void ns3::PhyStatsCalculator::ReportUeSinr(uint16_t cellId, uint64_t imsi, uint1
 {
 	double sinrdB = 10 * log(sinrLinear);
 	ues_sinr[imsi-1] = sinrdB;
+}
+
+void CourseChange(std::string context, Ptr<const MobilityModel> model){
+	static std::unordered_map<const MobilityModel*, double> start_times;
+	double now = Simulator::Now().GetSeconds();
+	double start_time;
+	if(start_times.count(PeekPointer(model)) > 0){ //check if key exists
+		start_time = start_times[PeekPointer(model)];
+		if(start_time >= 0){ //check if node started movement
+			if(model->GetVelocity().GetLength() == 0){ //Drone stopped?
+				time_to_centroid.push_back(now - start_time);
+				start_times[PeekPointer(model)] = -1;
+				LOG("drone arrived after " << now - start_time << " seconds");
+			}
+		} else {
+			if(model->GetVelocity().GetLength() > 0){ //Drone moving?
+				start_times[PeekPointer(model)] = now;
+			}
+		}
+	} else {
+		if(model->GetVelocity().GetLength() > 0){ //Drone moving?
+			start_times[PeekPointer(model)] = now;
+			active_drones++; //New drone moving;
+		}
+	}
 }
 
 void write_metrics(){
@@ -71,7 +100,18 @@ void write_metrics(){
 	coverageRatio = (float) qtyUEsCovered/qtyUEs;
 	ues_sinr_file << "Coverage ratio: " << coverageRatio * 100 << "%" << std::endl;
 	ues_sinr_file << sinrdata.str();
-};
+
+	std::stringstream timedata;
+	double total_time = 0;
+	double mean_time;
+	for(auto time: time_to_centroid){
+		total_time += time;
+		timedata << time << std::endl;
+	}
+	mean_time = total_time/active_drones;
+	time_to_centroid_file << "Mean time to centroid: " << mean_time << std::endl;
+	time_to_centroid_file << timedata.str();
+}
 
 void print_position(NodeContainer ueNodes)
 {
@@ -271,6 +311,7 @@ int main(int argc, char* argv[])
     std::string GetClusterCoordinates;
 	//Open file for writing and overwrite if it already exists
 	ues_sinr_file.open("ues_sinr.txt", std::ofstream::out | std::ofstream::trunc);
+	time_to_centroid_file.open("time_to_centroid.txt", std::ofstream::out | std::ofstream::trunc);
 
     ConfigStore inputConfig;
     inputConfig.ConfigureDefaults();
@@ -412,6 +453,15 @@ int main(int argc, char* argv[])
     lteHelper->EnableMacTraces();
 
 	Config::Connect ("/NodeList/*/DeviceList/*/LteUePhy/ReportUeSinr",MakeCallback (&ns3::PhyStatsCalculator::ReportUeSinr));
+
+	unsigned int id;
+	std::ostringstream oss;
+	for (uint32_t u = 0; u < UAVNodes.GetN(); ++u) {
+		id = UAVNodes.Get(u)->GetId();
+		oss << "/NodeList/" << id << "/$ns3::MobilityModel/CourseChange";
+		Config::Connect(oss.str(), MakeCallback(&CourseChange));
+		oss.str("");
+	}
 
     Ptr<FlowMonitor> flowMonitor;
     FlowMonitorHelper flowHelper;
