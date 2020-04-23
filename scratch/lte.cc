@@ -52,8 +52,9 @@ std::ofstream ues_sinr_file;
 std::vector<double> time_to_centroid;
 std::ofstream time_to_centroid_file;
 unsigned int active_drones = 0;
+std::string clustering_algoritm = "kmeans";
 
-std::string exec(const char* cmd);
+std::string exec(std::string cmd);
 
 void ns3::PhyStatsCalculator::ReportUeSinr(uint16_t cellId, uint64_t imsi, uint16_t rnti, double sinrLinear, uint8_t componentCarrierId)
 {
@@ -202,7 +203,7 @@ void send_drones_to_cluster_centers(NodeContainer nodes, NodeContainer drones) {
     // save user positions to file
     save_user_postions(nodes);
     // generate custering file
-    exec("python3 clustering.py");
+    exec("python3 clustering.py " + clustering_algoritm);
     // read cluster centers
     std::list<Vector> centers = get_cluster_centers();
 	Vector center;
@@ -233,11 +234,11 @@ void set_drones(NodeContainer drones) {
 }
 
 
-std::string exec(const char* cmd)
+std::string exec(std::string cmd)
 {
     std::array<char, 128> buffer;
     std::string result;
-    std::shared_ptr<FILE> pipe(popen(cmd, "r"), pclose);
+    std::shared_ptr<FILE> pipe(popen(cmd.c_str(), "r"), pclose);
     if (!pipe)
         throw std::runtime_error("popen() failed!");
     while (!feof(pipe.get())) {
