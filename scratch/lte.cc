@@ -283,15 +283,17 @@ void request_video(Ptr<Node> sender_node, Ptr<Node> receiver_node)
 
     EvalvidServerHelper server(m_port);
     server.SetAttribute("SenderTraceFilename", StringValue("st_highway_cif.st"));
-    server.SetAttribute("SenderDumpFilename", StringValue("evalvid_sd_" + std::to_string(request_id)));
+    //server.SetAttribute("SenderDumpFilename", StringValue("evalvid_sd_" + std::to_string(request_id)));
+		server.SetAttribute("SenderDumpFilename", StringValue("sd_" + std::to_string(request_id)));
     server.SetAttribute("PacketPayload", UintegerValue(512));
     ApplicationContainer apps = server.Install(sender_node);
-    apps.Start(Seconds(1));
+    apps.Start(Seconds(5));
 
     EvalvidClientHelper client(ipAddr, m_port);
-    client.SetAttribute("ReceiverDumpFilename", StringValue("evalvid_rd_" + std::to_string(request_id)));
+    //client.SetAttribute("ReceiverDumpFilename", StringValue("evalvid_rd_" + std::to_string(request_id)));
+		client.SetAttribute("ReceiverDumpFilename", StringValue("rd_" + std::to_string(request_id)));
     apps = client.Install(receiver_node);
-    apps.Start(Seconds(1));
+    apps.Start(Seconds(5));
 
     request_id++;
     m_port++;
