@@ -429,8 +429,8 @@ int main(int argc, char* argv[])
     Config::SetDefault("ns3::LteEnbPhy::NoiseFigure", DoubleValue(5)); // Default 5
 
 
-    for (uint32_t i = 0; i < ueNodes.GetN(); ++i) {
-        request_video(ueNodes.Get(i), remoteHost);
+    for (uint32_t i = 0; i < UAVNodes.GetN(); ++i) {
+        request_video(UAVNodes.Get(i), remoteHost);
     }
 
     AnimationInterface animator("lte.xml");
