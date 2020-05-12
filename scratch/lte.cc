@@ -165,7 +165,7 @@ std::list<Vector> get_cluster_centers() {
     std::list<Vector> centers;
     double x, y, z;
     while (infile >> x >> y >> z) {
-        Vector tmp = {x, y, 35};
+        Vector tmp = {x, y, z};
         centers.push_back(tmp);
     }
     infile.close();

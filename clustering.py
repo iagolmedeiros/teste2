@@ -53,7 +53,7 @@ clusters])
 
 with open("centers.txt", "w") as c:
     for center in cluster_centers:
-        coords = f"{center[0]} {center[1]} {center[2]}\n"
+        coords = f"{center[0]} {center[1]} 30\n"
         c.write(coords)
 
 f = open("centroids.txt", "w")
