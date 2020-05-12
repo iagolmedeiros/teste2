@@ -323,6 +323,7 @@ int main(int argc, char* argv[])
     cmd.AddValue("numUAVs", "how many drones in the simulation", numUAVs);
     cmd.AddValue("numUes", "how many UEs are attached to each eNB", numUes);
     cmd.AddValue("seedValue", "random seed value.", seedValue);
+	cmd.AddValue("algo", "clustering algoritm to use", clustering_algoritm);
     cmd.Parse(argc, argv);
 
     ns3::RngSeedManager::SetSeed(seedValue); //valor de seed para geração de números aleatórios
