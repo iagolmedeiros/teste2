@@ -225,7 +225,7 @@ void send_drones_to_cluster_centers(NodeContainer nodes, NodeContainer drones) {
 // initialize drones position
 void set_drones(NodeContainer drones) {
     std::default_random_engine generator;
-    std::uniform_real_distribution<double> distribution(0,200);
+    std::uniform_real_distribution<double> distribution(0,1000);
 
     for (uint32_t i = 0; i < drones.GetN(); ++i) {
         Ptr<WaypointMobilityModel> mob = drones.Get(i)->GetObject<WaypointMobilityModel>();
@@ -301,7 +301,7 @@ int main(int argc, char* argv[])
 {
     bool useCa = false;
     uint32_t numUAVs = 3;
-    uint32_t numUes = 30;
+    uint32_t numUes = 75;
     uint32_t seedValue = 10000;
     uint32_t SimTime = 30;
     int eNodeBTxPower = 23;
@@ -396,13 +396,13 @@ int main(int argc, char* argv[])
     BuildingsHelper::Install(UAVNodes);
 
     mobility.SetPositionAllocator("ns3::RandomDiscPositionAllocator", //
-        "X", DoubleValue(100), // The x coordinate of the center of the random position disc.
-        "Y", DoubleValue(100), // The y coordinate of the center of the random position disc.
+        "X", DoubleValue(500), // The x coordinate of the center of the random position disc.
+        "Y", DoubleValue(500), // The y coordinate of the center of the random position disc.
 		"Z", DoubleValue(1.5), // The z coordinate of all positions in the disc.
-        "Rho", StringValue("ns3::UniformRandomVariable[Min=0|Max=90]")); // A random variable which represents the radius of a position in a random disc.
+        "Rho", StringValue("ns3::UniformRandomVariable[Min=0|Max=400]")); // A random variable which represents the radius of a position in a random disc.
 
     mobility.SetMobilityModel("ns3::RandomWalk2dMobilityModel",
-        "Bounds", RectangleValue(Rectangle(-200, 200, -200, 200)));
+        "Bounds", RectangleValue(Rectangle(-1000, 1000, -1000, 1000)));
     mobility.Install(ueNodes);
     BuildingsHelper::Install(ueNodes);
 
