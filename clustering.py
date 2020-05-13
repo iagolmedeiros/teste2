@@ -44,7 +44,7 @@ if args.algo == 'kmeans' or args.algo == 'meanshift':
 
 else:
     if args.algo == 'dbscan':
-        fitted_algoritm = create_clusters(lines, cluster.DBSCAN, (), {'eps':20})
+        fitted_algoritm = create_clusters(lines, cluster.DBSCAN, (), {'eps':100})
     else:
         fitted_algoritm = create_clusters(lines, hdbscan.HDBSCAN, (), {'min_cluster_size': 15})
     clusters = get_clusters(lines,fitted_algoritm)
