@@ -53,6 +53,8 @@ std::vector<double> time_to_centroid;
 std::ofstream time_to_centroid_file;
 unsigned int active_drones = 0;
 std::string clustering_algoritm = "kmeans";
+bool disableDl = false;
+bool disableUl = false;
 
 std::string exec(std::string cmd);
 
@@ -299,6 +301,56 @@ void request_video(Ptr<Node> sender_node, Ptr<Node> receiver_node)
     m_port++;
 }
 
+void UDPApp (Ptr<Node> remoteHost, NodeContainer ueNodes)
+{
+	// Install and start applications on UEs and remote host
+
+	ApplicationContainer serverApps;
+	ApplicationContainer clientApps;
+	Time interPacketInterval = MilliSeconds (50);
+	uint16_t dlPort = 1100;
+	uint16_t ulPort = 2000;
+	int startTime = 2;
+	Ptr<Ipv4> remoteIpv4 = remoteHost->GetObject<Ipv4>();
+	Ipv4Address remoteIpAddr = remoteIpv4->GetAddress(1, 0).GetLocal(); //Interface 0 is loopback
+
+	for (uint32_t u = 0; u < ueNodes.GetN (); ++u)
+	{
+		Ptr<Node> ue = ueNodes.Get (u);
+		Ptr<Ipv4> ueIpv4 = ue->GetObject<Ipv4>();
+		Ipv4Address ueIpAddr = ueIpv4->GetAddress(1, 0).GetLocal();
+		ulPort++;
+
+		if (!disableDl)
+		{
+			PacketSinkHelper dlPacketSinkHelper ("ns3::UdpSocketFactory", InetSocketAddress (Ipv4Address::GetAny (), dlPort));
+			serverApps.Add (dlPacketSinkHelper.Install (ue));
+
+			UdpClientHelper dlClient (ueIpAddr, dlPort);
+			dlClient.SetAttribute ("Interval", TimeValue (interPacketInterval));
+			dlClient.SetAttribute ("MaxPackets", UintegerValue (1000000));
+			dlClient.SetAttribute ("PacketSize", UintegerValue (1024));
+			clientApps.Add (dlClient.Install (remoteHost));
+		}
+
+		if (!disableUl)
+		{
+			++ulPort;
+			PacketSinkHelper ulPacketSinkHelper ("ns3::UdpSocketFactory", InetSocketAddress (Ipv4Address::GetAny (), ulPort));
+			serverApps.Add (ulPacketSinkHelper.Install (remoteHost));
+
+			UdpClientHelper ulClient (remoteIpAddr, ulPort);
+			ulClient.SetAttribute ("Interval", TimeValue (interPacketInterval));
+			ulClient.SetAttribute ("MaxPackets", UintegerValue (1000000));
+			ulClient.SetAttribute ("PacketSize", UintegerValue (1024));
+			clientApps.Add (ulClient.Install (ue));
+		}
+	}
+
+	serverApps.Start (Seconds(1));
+	clientApps.Start (Seconds(startTime));
+}
+
 int main(int argc, char* argv[])
 {
     bool useCa = false;
@@ -428,6 +480,8 @@ int main(int argc, char* argv[])
     Config::SetDefault("ns3::LteEnbPhy::TxPower", DoubleValue(eNodeBTxPower));
     Config::SetDefault("ns3::LteEnbPhy::NoiseFigure", DoubleValue(5)); // Default 5
 
+	//Setup Applications
+	UDPApp(remoteHost, ueNodes);
 
     for (uint32_t i = 0; i < UAVNodes.GetN(); ++i) {
         request_video(UAVNodes.Get(i), remoteHost);
