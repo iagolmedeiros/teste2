@@ -469,6 +469,8 @@ int main(int argc, char* argv[])
         ueStaticRouting->SetDefaultRoute(epcHelper->GetUeDefaultGatewayAddress(), 1);
     }
 
+	lteHelper->SetEnbDeviceAttribute ("DlBandwidth", UintegerValue (25)); //Set Download BandWidth
+	lteHelper->SetEnbDeviceAttribute ("UlBandwidth", UintegerValue (25)); //Set Upload Bandwidth
     enbDevs = lteHelper->InstallEnbDevice(UAVNodes);
     ueDevs = lteHelper->InstallUeDevice(ueNodes);
 
