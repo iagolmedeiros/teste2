@@ -440,6 +440,10 @@ int main(int argc, char* argv[])
     Ipv4StaticRoutingHelper ipv4RoutingHelper;
     Ptr<Ipv4StaticRouting> remoteHostStaticRouting = ipv4RoutingHelper.GetStaticRouting(remoteHost->GetObject<Ipv4>());
     remoteHostStaticRouting->AddNetworkRouteTo(Ipv4Address("7.0.0.0"), Ipv4Mask("255.0.0.0"), 1);
+	remoteHostStaticRouting->AddNetworkRouteTo(Ipv4Address("10.0.0.0"), Ipv4Mask("255.255.255.192"), 1); //Route to UAVs
+
+	Ptr<Ipv4StaticRouting> pgwStaticRouting = ipv4RoutingHelper.GetStaticRouting(pgw->GetObject<Ipv4>());
+	pgwStaticRouting->AddNetworkRouteTo(Ipv4Address("10.0.0.0"), Ipv4Mask("255.255.255.192"), 2);
 
     NodeContainer UAVNodes;
     NodeContainer ueNodes;
@@ -492,6 +496,17 @@ int main(int argc, char* argv[])
 
     Config::SetDefault("ns3::LteEnbPhy::TxPower", DoubleValue(eNodeBTxPower));
     Config::SetDefault("ns3::LteEnbPhy::NoiseFigure", DoubleValue(5)); // Default 5
+
+	for (uint32_t u = 0; u < UAVNodes.GetN(); ++u) {
+        Ptr<Node> UAVNode = UAVNodes.Get(u);
+		Ptr<Ipv4> UAVIpv4 = UAVNode->GetObject<Ipv4>();
+        Ptr<Ipv4StaticRouting> UAVStaticRouting = ipv4RoutingHelper.GetStaticRouting(UAVIpv4);
+        UAVStaticRouting->AddNetworkRouteTo(Ipv4Address("1.0.0.0"), Ipv4Mask("255.0.0.0"), 1);
+    }
+	Ptr<Node> sgw = epcHelper->GetSgwNode();
+	Ptr<Ipv4> sgwIpv4 = sgw->GetObject<Ipv4>();
+	Ptr<Ipv4StaticRouting> sgwStaticRouting = ipv4RoutingHelper.GetStaticRouting(sgwIpv4);
+	sgwStaticRouting->AddNetworkRouteTo(Ipv4Address("1.0.0.0"), Ipv4Mask("255.0.0.0"), 1);
 
 	//Setup Applications
 	UDPApp(remoteHost, ueNodes);
