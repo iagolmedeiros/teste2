@@ -54,7 +54,7 @@ std::ofstream time_to_centroid_file;
 unsigned int active_drones = 0;
 std::string clustering_algoritm = "kmeans";
 bool disableDl = false;
-bool disableUl = false;
+bool disableUl = true;
 
 std::string exec(std::string cmd);
 
