@@ -382,7 +382,8 @@ int main(int argc, char* argv[])
     ConfigStore inputConfig;
     inputConfig.ConfigureDefaults();
 
-    LogComponentEnable("EvalvidClient", LOG_ALL);
+    LogComponentEnable("EvalvidClient", LOG_INFO);
+	LogComponentEnable("EvalvidServer", LOG_INFO);
 
     cmd.AddValue("useCa", "Whether to use carrier aggregation.", useCa);
     cmd.AddValue("numUAVs", "how many drones in the simulation", numUAVs);
