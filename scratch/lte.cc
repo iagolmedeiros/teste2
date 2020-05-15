@@ -254,24 +254,35 @@ void ThroughputMonitor(FlowMonitorHelper* fmhelper, Ptr<FlowMonitor> flowMon)
 {
     flowMon->CheckForLostPackets();
     uint32_t LostPacketsum = 0;
+	float PDR, PLR, Delay, Throughput;
     std::map<FlowId, FlowMonitor::FlowStats> flowStats = flowMon->GetFlowStats();
     Ptr<Ipv4FlowClassifier> classing = DynamicCast<Ipv4FlowClassifier>(fmhelper->GetClassifier());
+	std::ofstream qos_file;
+	qos_file.open("qos.txt", std::ofstream::out | std::ofstream::trunc);
+
     for (std::map<FlowId, FlowMonitor::FlowStats>::const_iterator stats = flowStats.begin(); stats != flowStats.end(); ++stats) {
         Ipv4FlowClassifier::FiveTuple fiveTuple = classing->FindFlow(stats->first);
+		PDR = (100 * stats->second.rxPackets) / (stats->second.txPackets);
+        LostPacketsum = (stats->second.txPackets) - (stats->second.rxPackets);
+		PLR = ((LostPacketsum * 100) / stats->second.txPackets);
+		Delay = (stats->second.delaySum.GetSeconds()) / (stats->second.txPackets);
+		Throughput = stats->second.rxBytes * 8.0 / (stats->second.timeLastRxPacket.GetSeconds() - stats->second.timeFirstTxPacket.GetSeconds()) / 1024 / 1024;
+
         std::cout << "Flow ID			: " << stats->first << " ; " << fiveTuple.sourceAddress << " -----> " << fiveTuple.destinationAddress << std::endl;
         std::cout << "Tx Packets = " << stats->second.txPackets << std::endl;
         std::cout << "Rx Packets = " << stats->second.rxPackets << std::endl;
         std::cout << "Lost Packets = " << (stats->second.txPackets) - (stats->second.rxPackets) << std::endl;
-        LostPacketsum = (stats->second.txPackets) - (stats->second.rxPackets);
-        std::cout << "Packets Delivery Ratio (PDR) = " << (100 * stats->second.rxPackets) / (stats->second.txPackets) << "%" << std::endl;
-        std::cout << "Packets Lost Ratio (PLR) = " << ((LostPacketsum * 100) / stats->second.txPackets) << "%" << std::endl;
-        std::cout << "Delay = " << (stats->second.delaySum.GetSeconds()) / (stats->second.txPackets) << " Seconds" << std::endl;
+        std::cout << "Packets Delivery Ratio (PDR) = " << PDR << "%" << std::endl;
+        std::cout << "Packets Lost Ratio (PLR) = " << PLR << "%" << std::endl;
+        std::cout << "Delay = " << Delay << " Seconds" << std::endl;
         std::cout << "Total Duration		: " << stats->second.timeLastRxPacket.GetSeconds() - stats->second.timeFirstTxPacket.GetSeconds() << " Seconds" << std::endl;
         std::cout << "Last Received Packet	: " << stats->second.timeLastRxPacket.GetSeconds() << " Seconds" << std::endl;
-        std::cout << "Throughput: " << stats->second.rxBytes * 8.0 / (stats->second.timeLastRxPacket.GetSeconds() - stats->second.timeFirstTxPacket.GetSeconds()) / 1024 / 1024 << " Mbps" << std::endl;
+        std::cout << "Throughput: " << Throughput << " Mbps" << std::endl;
         std::cout << "---------------------------------------------------------------------------" << std::endl;
+		qos_file << fiveTuple.sourceAddress << " --> " << fiveTuple.destinationAddress << "," << PDR << "," << PLR << "," << Delay << "," << Throughput << "\n";
     }
-    Simulator::Schedule(Seconds(1), &ThroughputMonitor, fmhelper, flowMon);
+
+	qos_file.close();
 }
 
 void request_video(Ptr<Node> sender_node, Ptr<Node> receiver_node)
@@ -535,7 +546,7 @@ int main(int argc, char* argv[])
     // }
 
 	Simulator::Schedule(Seconds(SimTime-0.001), &write_metrics);
-    Simulator::Schedule(Seconds(1), ThroughputMonitor, &flowHelper, flowMonitor);
+    Simulator::Schedule(Seconds(SimTime-0.001), ThroughputMonitor, &flowHelper, flowMonitor);
     Simulator::Schedule(Seconds(1), &send_drones_to_cluster_centers, ueNodes, UAVNodes);
 
     // set initial positions of drones
