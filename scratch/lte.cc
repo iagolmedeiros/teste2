@@ -367,6 +367,7 @@ int main(int argc, char* argv[])
     bool useCa = false;
     uint32_t numUAVs = 3;
     uint32_t numUes = 75;
+	uint32_t numCars = 10;
     uint32_t seedValue = 10000;
     uint32_t SimTime = 30;
     int eNodeBTxPower = 23;
@@ -400,7 +401,7 @@ int main(int argc, char* argv[])
         Config::SetDefault("ns3::LteHelper::EnbComponentCarrierManager", StringValue("ns3::RrComponentCarrierManager"));
     }
 
-	ues_sinr.resize(numUes);
+	ues_sinr.resize(numUes+numCars);
 
     Ptr<LteHelper> lteHelper = CreateObject<LteHelper>();
     Ptr<PointToPointEpcHelper> epcHelper = CreateObject<PointToPointEpcHelper>();
@@ -448,10 +449,14 @@ int main(int argc, char* argv[])
 
     NodeContainer UAVNodes;
     NodeContainer ueNodes;
+	NodeContainer carNodes;
+
     UAVNodes.Create(numUAVs);
     ueNodes.Create(numUes);
+	carNodes.Create(numCars);
 
     internet.Install(ueNodes);
+	internet.Install(carNodes);
     
     MobilityHelper mobility;
     mobility.SetMobilityModel("ns3::ConstantPositionMobilityModel");
@@ -465,7 +470,7 @@ int main(int argc, char* argv[])
     UAVmobility.Install(UAVNodes);
     BuildingsHelper::Install(UAVNodes);
 
-    mobility.SetPositionAllocator("ns3::RandomDiscPositionAllocator", //
+    mobility.SetPositionAllocator("ns3::RandomDiscPositionAllocator",
         "X", DoubleValue(500), // The x coordinate of the center of the random position disc.
         "Y", DoubleValue(500), // The y coordinate of the center of the random position disc.
 		"Z", DoubleValue(1.5), // The z coordinate of all positions in the disc.
@@ -476,8 +481,28 @@ int main(int argc, char* argv[])
     mobility.Install(ueNodes);
     BuildingsHelper::Install(ueNodes);
 
+	Ptr<ConstantRandomVariable> Z = CreateObject<ConstantRandomVariable> ();
+	Z->SetAttribute ("Constant", DoubleValue (2));
+
+	Ptr<RandomBoxPositionAllocator> waypointAllocator = CreateObject<RandomBoxPositionAllocator> ();
+	waypointAllocator->SetAttribute ("X", StringValue("ns3::UniformRandomVariable[Min=-1000|Max=1000]"));
+	waypointAllocator->SetAttribute ("Y", StringValue("ns3::UniformRandomVariable[Min=-1000|Max=1000]"));
+	waypointAllocator->SetAttribute ("Z", PointerValue (Z));
+
+	mobility.SetMobilityModel("ns3::RandomWaypointMobilityModel",
+		"Speed", StringValue("ns3::UniformRandomVariable[Min=5|Max=12]"),
+		"PositionAllocator", PointerValue (waypointAllocator));
+	mobility.SetPositionAllocator("ns3::RandomDiscPositionAllocator",
+        "X", DoubleValue(500), // The x coordinate of the center of the random position disc.
+        "Y", DoubleValue(500), // The y coordinate of the center of the random position disc.
+		"Z", DoubleValue(2), // The z coordinate of all positions in the disc.
+        "Rho", StringValue("ns3::UniformRandomVariable[Min=0|Max=400]"));
+	mobility.Install(carNodes);
+	BuildingsHelper::Install(carNodes);
+
     NetDeviceContainer enbDevs;
     NetDeviceContainer ueDevs;
+	NetDeviceContainer carDevs;
 
     for (uint32_t u = 0; u < ueNodes.GetN(); ++u) {
         Ptr<Node> ueNode = ueNodes.Get(u);
@@ -485,15 +510,26 @@ int main(int argc, char* argv[])
         ueStaticRouting->SetDefaultRoute(epcHelper->GetUeDefaultGatewayAddress(), 1);
     }
 
+	for (uint32_t u = 0; u < carNodes.GetN(); ++u) {
+		Ptr<Node> carNode = carNodes.Get(u);
+		Ptr<Ipv4StaticRouting> carStaticRouting = ipv4RoutingHelper.GetStaticRouting(carNode->GetObject<Ipv4>());
+		carStaticRouting->SetDefaultRoute(epcHelper->GetUeDefaultGatewayAddress(), 1);
+	}
+
 	lteHelper->SetEnbDeviceAttribute ("DlBandwidth", UintegerValue (25)); //Set Download BandWidth
 	lteHelper->SetEnbDeviceAttribute ("UlBandwidth", UintegerValue (25)); //Set Upload Bandwidth
     enbDevs = lteHelper->InstallEnbDevice(UAVNodes);
-    ueDevs = lteHelper->InstallUeDevice(ueNodes);
+    
+	ueDevs = lteHelper->InstallUeDevice(ueNodes);
+	carDevs = lteHelper->InstallUeDevice(carNodes);
 
     Ipv4InterfaceContainer ueIpIface;
+	Ipv4InterfaceContainer carIpIface;
     ueIpIface = epcHelper->AssignUeIpv4Address(NetDeviceContainer(ueDevs));
+	carIpIface = epcHelper->AssignUeIpv4Address(NetDeviceContainer(carDevs));
 
     lteHelper->Attach(ueDevs);
+	lteHelper->Attach(carDevs);
 
     Config::SetDefault("ns3::LteEnbPhy::TxPower", DoubleValue(eNodeBTxPower));
     Config::SetDefault("ns3::LteEnbPhy::NoiseFigure", DoubleValue(5)); // Default 5
@@ -510,7 +546,7 @@ int main(int argc, char* argv[])
 	sgwStaticRouting->AddNetworkRouteTo(Ipv4Address("1.0.0.0"), Ipv4Mask("255.0.0.0"), 1);
 
 	//Setup Applications
-	UDPApp(remoteHost, ueNodes);
+	UDPApp(remoteHost, NodeContainer(ueNodes, carNodes));
 
     for (uint32_t i = 0; i < UAVNodes.GetN(); ++i) {
         request_video(UAVNodes.Get(i), remoteHost);
@@ -521,17 +557,22 @@ int main(int argc, char* argv[])
     for (uint32_t i = 0; i < UAVNodes.GetN(); ++i) {
         animator.UpdateNodeDescription(UAVNodes.Get(i), "UAV " + std::to_string(i));
         animator.UpdateNodeColor(UAVNodes.Get(i), 250, 200, 45);
-		animator.UpdateNodeSize(UAVNodes.Get(i)->GetId(),4,4); // to change the node size in the animation.
+		animator.UpdateNodeSize(UAVNodes.Get(i)->GetId(),10,10); // to change the node size in the animation.
     }
     for (uint32_t j = 0; j < ueNodes.GetN(); ++j) {
         animator.UpdateNodeDescription(ueNodes.Get(j), "UE " + std::to_string(j));
         animator.UpdateNodeColor(ueNodes.Get(j), 20, 10, 145);
-		animator.UpdateNodeSize(ueNodes.Get(j)->GetId(),4,4);
+		animator.UpdateNodeSize(ueNodes.Get(j)->GetId(),10,10);
     }
+	for (uint32_t j = 0; j < carNodes.GetN(); ++j) {
+		animator.UpdateNodeDescription(carNodes.Get(j), "Car " + std::to_string(j));
+		animator.UpdateNodeColor(carNodes.Get(j), 20, 100, 145);
+		animator.UpdateNodeSize(carNodes.Get(j)->GetId(),10,10);
+	}
     for (uint32_t k = 0; k < remoteHostContainer.GetN(); ++k) {
         animator.UpdateNodeDescription(remoteHostContainer.Get(k), "RemoteHost " + std::to_string(k));
         animator.UpdateNodeColor(remoteHostContainer.Get(k), 110, 150, 45);
-		animator.UpdateNodeSize(remoteHostContainer.Get(k)->GetId(),4,4);
+		animator.UpdateNodeSize(remoteHostContainer.Get(k)->GetId(),10,10);
     }
 
     lteHelper->EnableTraces();
@@ -554,7 +595,8 @@ int main(int argc, char* argv[])
     FlowMonitorHelper flowHelper;
 	flowHelper.Install(remoteHost);
 	flowHelper.Install(UAVNodes);
-    flowMonitor = flowHelper.Install(ueNodes);
+    flowHelper.Install(ueNodes);
+	flowMonitor = flowHelper.Install(carNodes);
 
     Simulator::Stop(Seconds(SimTime));
 
@@ -564,13 +606,13 @@ int main(int argc, char* argv[])
 
 	Simulator::Schedule(Seconds(SimTime-0.001), &write_metrics);
     Simulator::Schedule(Seconds(SimTime-0.001), ThroughputMonitor, &flowHelper, flowMonitor);
-    Simulator::Schedule(Seconds(1), &send_drones_to_cluster_centers, ueNodes, UAVNodes);
+    Simulator::Schedule(Seconds(1), &send_drones_to_cluster_centers, NodeContainer(ueNodes, carNodes), UAVNodes);
 
     // set initial positions of drones
     set_drones(UAVNodes);
 
     // save user positions to file
-    save_user_postions(ueNodes);
+    save_user_postions(NodeContainer(ueNodes, carNodes));
 
 	BuildingsHelper::MakeMobilityModelConsistent ();
 
