@@ -55,6 +55,7 @@ unsigned int active_drones = 0;
 std::string clustering_algoritm = "kmeans";
 bool disableDl = false;
 bool disableUl = true;
+std::string ns3_dir;
 
 std::string exec(std::string cmd);
 
@@ -205,7 +206,7 @@ void send_drones_to_cluster_centers(NodeContainer nodes, NodeContainer drones) {
     // save user positions to file
     save_user_postions(nodes);
     // generate custering file
-    exec("python3 clustering.py " + clustering_algoritm);
+    exec(std::string("python3 ") + ns3_dir + std::string("/clustering.py ") + clustering_algoritm);
     // read cluster centers
     std::list<Vector> centers = get_cluster_centers();
 	Vector center;
@@ -295,7 +296,7 @@ void request_video(Ptr<Node> sender_node, Ptr<Node> receiver_node)
     Ipv4Address ipAddr = iaddr.GetLocal();
 
     EvalvidServerHelper server(m_port);
-    server.SetAttribute("SenderTraceFilename", StringValue("st_highway_cif.st"));
+    server.SetAttribute("SenderTraceFilename", StringValue(ns3_dir + std::string("/st_highway_cif.st")));
     //server.SetAttribute("SenderDumpFilename", StringValue("evalvid_sd_" + std::to_string(request_id)));
 		server.SetAttribute("SenderDumpFilename", StringValue("sd_" + std::to_string(request_id)));
     server.SetAttribute("PacketPayload", UintegerValue(512));
@@ -362,6 +363,48 @@ void UDPApp (Ptr<Node> remoteHost, NodeContainer ueNodes)
 	clientApps.Start (Seconds(startTime));
 }
 
+bool IsTopLevelSourceDir (std::string path)
+{
+	bool haveVersion = false;
+	bool haveLicense = false;
+
+	//
+	// If there's a file named VERSION and a file named LICENSE in this
+	// directory, we assume it's our top level source directory.
+	//
+
+	std::list<std::string> files = SystemPath::ReadFiles (path);
+	for (std::list<std::string>::const_iterator i = files.begin (); i != files.end (); ++i)
+	{
+		if (*i == "VERSION")
+		{
+			haveVersion = true;
+		}
+		else if (*i == "LICENSE")
+		{
+			haveLicense = true;
+		}
+	}
+
+	return haveVersion && haveLicense;
+}
+
+std::string GetTopLevelSourceDir (void)
+{
+	std::string self = SystemPath::FindSelfDirectory ();
+	std::list<std::string> elements = SystemPath::Split (self);
+	while (!elements.empty ())
+	{
+		std::string path = SystemPath::Join (elements.begin (), elements.end ());
+		if (IsTopLevelSourceDir (path))
+		{
+			return path;
+		}
+		elements.pop_back ();
+	}
+	NS_FATAL_ERROR ("Could not find source directory from self=" << self);
+}
+
 int main(int argc, char* argv[])
 {
     bool useCa = false;
@@ -394,6 +437,7 @@ int main(int argc, char* argv[])
     cmd.Parse(argc, argv);
 
     ns3::RngSeedManager::SetSeed(seedValue); //valor de seed para geração de números aleatórios
+	ns3_dir = GetTopLevelSourceDir();
     
 	if (useCa) {
         Config::SetDefault("ns3::LteHelper::UseCa", BooleanValue(useCa));
