@@ -473,7 +473,7 @@ int main(int argc, char* argv[])
     p2ph.SetDeviceAttribute("DataRate", DataRateValue(DataRate("100Gb/s")));
     p2ph.SetDeviceAttribute("Mtu", UintegerValue(1400));
     p2ph.SetChannelAttribute("Delay", TimeValue(Seconds(0.010)));
-    p2ph.EnablePcapAll("zob");
+    //p2ph.EnablePcapAll("zob");
     NetDeviceContainer internetDevices = p2ph.Install(pgw, remoteHost);
 
     Ipv4AddressHelper ipv4h;
@@ -619,10 +619,10 @@ int main(int argc, char* argv[])
 		animator.UpdateNodeSize(remoteHostContainer.Get(k)->GetId(),10,10);
     }
 
-    lteHelper->EnableTraces();
-    lteHelper->EnablePhyTraces();
-    lteHelper->EnableUlPhyTraces();
-    lteHelper->EnableMacTraces();
+    //lteHelper->EnableTraces();
+    //lteHelper->EnablePhyTraces();
+    //lteHelper->EnableUlPhyTraces();
+    //lteHelper->EnableMacTraces();
 
 	Config::Connect ("/NodeList/*/DeviceList/*/LteUePhy/ReportUeSinr",MakeCallback (&ns3::PhyStatsCalculator::ReportUeSinr));
 
