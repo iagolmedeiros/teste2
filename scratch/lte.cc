@@ -26,6 +26,9 @@
 #include "ns3/evalvid-client.h"
 #include "ns3/evalvid-server.h"
 
+#include <boost/algorithm/string/classification.hpp> // Include boost::for is_any_of
+#include <boost/algorithm/string/split.hpp> // Include for boost::split
+
 #define LOG(x) std::cout << x << std::endl
 #define wait std::cin.get()
 
@@ -51,6 +54,7 @@ std::vector<double> ues_sinr;
 std::ofstream ues_sinr_file;
 std::vector<double> time_to_centroid;
 std::ofstream time_to_centroid_file;
+std::ofstream ue_positions_log;
 unsigned int active_drones = 0;
 std::string clustering_algoritm = "kmeans";
 bool disableDl = false;
@@ -138,6 +142,51 @@ void save_user_postions(NodeContainer nodes) {
     pos_file.close();
 }
 
+void save_user_postions(NodeContainer nodes, std::vector<Vector2D> predicted_coords) {
+    Vector2D coords;
+	std::ofstream pos_file("positions.txt");
+    for (uint32_t i = 0; i < nodes.GetN(); ++i) {
+        Ptr<MobilityModel> mob = nodes.Get(i)->GetObject<MobilityModel>();
+        Vector pos = mob->GetPosition();
+		coords = predicted_coords[i];
+        pos_file << coords.x << " " << coords.y << " " << pos.z << "\n";
+    }   
+    pos_file.close();
+}
+
+void log_ue_positions(NodeContainer UEs, std::ofstream* ue_positions_log){
+	double now = Simulator::Now().GetSeconds();
+	for (NodeContainer::Iterator i = UEs.Begin(); i != UEs.End (); ++i){
+		Ptr<Node> UE = *i;
+		Ptr<MobilityModel> UEposition = UE->GetObject<MobilityModel> ();
+		Vector pos = UEposition->GetPosition ();
+		*ue_positions_log << now << "," << UE->GetId() << "," << pos.x << "," << pos.y << "\n";
+	}
+	ue_positions_log->flush();
+	Simulator::Schedule(Seconds(1), &log_ue_positions, UEs, ue_positions_log);
+}
+
+std::vector<Vector2D> do_predictions(){
+	static double last_time;
+	static std::vector<Vector2D> predicted_coords;
+	std::string prediction;
+	std::vector<std::string> split;
+	Vector2D coordinate;
+
+	if(last_time == Simulator::Now().GetSeconds())
+		return predicted_coords; //return cached prediction
+
+	predicted_coords.clear();
+	last_time = Simulator::Now().GetSeconds();
+	prediction = exec(std::string("python3 ") + ns3_dir + std::string("/prediction.py 2>>prediction_errors.txt"));
+	boost::split(split, prediction, boost::is_any_of(" "), boost::token_compress_on);
+	for(unsigned int i = 0; i < split.size()-1; i+=3){
+		coordinate = Vector2D(std::stod(split[i+1]), std::stod(split[i+2]));
+		predicted_coords.push_back(coordinate);
+	}
+	return predicted_coords;
+}
+
 // move node "smoothly" towards the given position
 void move_drones(Ptr<Node> drone, Vector position, double n_vel) {
 	// get mobility model for drone
@@ -203,8 +252,15 @@ std::list<Vector>::iterator find_center(Vector center, std::list<Vector>& center
 }
 
 void send_drones_to_cluster_centers(NodeContainer nodes, NodeContainer drones) {
+	double now = Simulator::Now().GetSeconds();
+	std::vector<Vector2D> predicted_coords;
     // save user positions to file
-    save_user_postions(nodes);
+    if(now < 10){
+		save_user_postions(nodes);
+	} else {
+		predicted_coords = do_predictions();
+		save_user_postions(nodes, predicted_coords);
+	}
     // generate custering file
     exec(std::string("python3 ") + ns3_dir + std::string("/clustering.py ") + clustering_algoritm);
     // read cluster centers
@@ -422,6 +478,8 @@ int main(int argc, char* argv[])
 	//Open file for writing and overwrite if it already exists
 	ues_sinr_file.open("ues_sinr.txt", std::ofstream::out | std::ofstream::trunc);
 	time_to_centroid_file.open("time_to_centroid.txt", std::ofstream::out | std::ofstream::trunc);
+	ue_positions_log.open("ue_positions_log.txt", std::ofstream::out | std::ofstream::trunc);
+	ue_positions_log << numUes + numCars << std::endl;
 
     ConfigStore inputConfig;
     inputConfig.ConfigureDefaults();
@@ -650,6 +708,7 @@ int main(int argc, char* argv[])
 
 	Simulator::Schedule(Seconds(SimTime-0.001), &write_metrics);
     Simulator::Schedule(Seconds(SimTime-0.001), ThroughputMonitor, &flowHelper, flowMonitor);
+	Simulator::Schedule(Seconds(1), &log_ue_positions, NodeContainer(ueNodes, carNodes), &ue_positions_log);
     Simulator::Schedule(Seconds(1), &send_drones_to_cluster_centers, NodeContainer(ueNodes, carNodes), UAVNodes);
 
     // set initial positions of drones
@@ -705,6 +764,11 @@ int main(int argc, char* argv[])
     // }
 
     Simulator::Destroy();
+
+	ues_sinr_file.close();
+	time_to_centroid_file.close();
+	ue_positions_log.close();
+
     return 0;
 }
 
