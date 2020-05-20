@@ -619,9 +619,9 @@ int main(int argc, char* argv[])
 		animator.UpdateNodeSize(remoteHostContainer.Get(k)->GetId(),10,10);
     }
 
-    //lteHelper->EnableTraces();
+    //lteHelper->EnableTraces(); //enable all traces
     //lteHelper->EnablePhyTraces();
-    //lteHelper->EnableUlPhyTraces();
+    lteHelper->EnableUlPhyTraces();
     //lteHelper->EnableMacTraces();
 
 	Config::Connect ("/NodeList/*/DeviceList/*/LteUePhy/ReportUeSinr",MakeCallback (&ns3::PhyStatsCalculator::ReportUeSinr));
