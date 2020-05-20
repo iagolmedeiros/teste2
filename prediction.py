@@ -34,7 +34,7 @@ Position = namedtuple('Position', ['x', 'y'])
 
 parser = argparse.ArgumentParser(description='UE position prediction script.')
 parser.add_argument('-e', '--error', action='store_true',
-                    help='Calculate mse of algoritms')
+                    help='Calculate mean squared error of algorithms. Should be used only after simulation completion')
 args = parser.parse_args()
 
 lines = open('ue_positions_log.txt','r').readlines()
