@@ -17,6 +17,7 @@ print(campaign)
 
 param_combinations = {
     'algo' : ['kmeans', 'meanshift', 'dbscan', 'hdbscan'],
+    'enablePrediction' : 'true',
     'numUAVs' : 3,
     'numUes' : 75,
     'seedValue' : 10000,

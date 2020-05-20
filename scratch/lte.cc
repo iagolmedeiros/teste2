@@ -59,6 +59,7 @@ unsigned int active_drones = 0;
 std::string clustering_algoritm = "kmeans";
 bool disableDl = false;
 bool disableUl = true;
+bool enablePrediction = true;
 std::string ns3_dir;
 
 std::string exec(std::string cmd);
@@ -255,11 +256,11 @@ void send_drones_to_cluster_centers(NodeContainer nodes, NodeContainer drones) {
 	double now = Simulator::Now().GetSeconds();
 	std::vector<Vector2D> predicted_coords;
     // save user positions to file
-    if(now < 10){
-		save_user_positions(nodes);
-	} else {
+    if(enablePrediction && now >= 10){
 		predicted_coords = do_predictions();
 		save_user_positions(nodes, predicted_coords);
+	} else {
+		save_user_positions(nodes);
 	}
     // generate custering file
     exec(std::string("python3 ") + ns3_dir + std::string("/clustering.py ") + clustering_algoritm);
@@ -492,6 +493,7 @@ int main(int argc, char* argv[])
     cmd.AddValue("numUes", "how many UEs are attached to each eNB", numUes);
     cmd.AddValue("seedValue", "random seed value.", seedValue);
 	cmd.AddValue("algo", "clustering algoritm to use", clustering_algoritm);
+	cmd.AddValue("enablePrediction", "Enable user movement prediction", enablePrediction);
     cmd.Parse(argc, argv);
 
     ns3::RngSeedManager::SetSeed(seedValue); //valor de seed para geração de números aleatórios
@@ -708,7 +710,9 @@ int main(int argc, char* argv[])
 
 	Simulator::Schedule(Seconds(SimTime-0.001), &write_metrics);
     Simulator::Schedule(Seconds(SimTime-0.001), ThroughputMonitor, &flowHelper, flowMonitor);
-	Simulator::Schedule(Seconds(1), &log_ue_positions, NodeContainer(ueNodes, carNodes), &ue_positions_log);
+	if(enablePrediction){
+		Simulator::Schedule(Seconds(1), &log_ue_positions, NodeContainer(ueNodes, carNodes), &ue_positions_log);
+	}
     Simulator::Schedule(Seconds(1), &send_drones_to_cluster_centers, NodeContainer(ueNodes, carNodes), UAVNodes);
 
     // set initial positions of drones
