@@ -132,7 +132,7 @@ void print_position(NodeContainer ueNodes)
     }
 }
 
-void save_user_postions(NodeContainer nodes) {
+void save_user_positions(NodeContainer nodes) {
     std::ofstream pos_file("positions.txt");
     for (uint32_t i = 0; i < nodes.GetN(); ++i) {
         Ptr<MobilityModel> mob = nodes.Get(i)->GetObject<MobilityModel>();
@@ -142,7 +142,7 @@ void save_user_postions(NodeContainer nodes) {
     pos_file.close();
 }
 
-void save_user_postions(NodeContainer nodes, std::vector<Vector2D> predicted_coords) {
+void save_user_positions(NodeContainer nodes, std::vector<Vector2D> predicted_coords) {
     Vector2D coords;
 	std::ofstream pos_file("positions.txt");
     for (uint32_t i = 0; i < nodes.GetN(); ++i) {
@@ -256,10 +256,10 @@ void send_drones_to_cluster_centers(NodeContainer nodes, NodeContainer drones) {
 	std::vector<Vector2D> predicted_coords;
     // save user positions to file
     if(now < 10){
-		save_user_postions(nodes);
+		save_user_positions(nodes);
 	} else {
 		predicted_coords = do_predictions();
-		save_user_postions(nodes, predicted_coords);
+		save_user_positions(nodes, predicted_coords);
 	}
     // generate custering file
     exec(std::string("python3 ") + ns3_dir + std::string("/clustering.py ") + clustering_algoritm);
@@ -715,7 +715,7 @@ int main(int argc, char* argv[])
     set_drones(UAVNodes);
 
     // save user positions to file
-    save_user_postions(NodeContainer(ueNodes, carNodes));
+    save_user_positions(NodeContainer(ueNodes, carNodes));
 
 	BuildingsHelper::MakeMobilityModelConsistent ();
 
