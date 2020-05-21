@@ -263,7 +263,7 @@ void send_drones_to_cluster_centers(NodeContainer nodes, NodeContainer drones) {
 		save_user_positions(nodes);
 	}
     // generate custering file
-    exec(std::string("python3 ") + ns3_dir + std::string("/clustering.py ") + clustering_algoritm);
+    exec(std::string("python3 ") + ns3_dir + std::string("/clustering.py -c ") + std::to_string(drones.GetN()) + std::string(" ") + clustering_algoritm);
     // read cluster centers
     std::list<Vector> centers = get_cluster_centers();
 	Vector center;

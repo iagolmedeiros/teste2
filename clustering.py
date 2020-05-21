@@ -25,6 +25,8 @@ def calculate_centroid(cluster):
     return centroid
 
 parser = argparse.ArgumentParser(description='Cluster position data with different algoritms.')
+parser.add_argument('-c', '--clusters', default=3,
+                    help='Number of clusters to create. This option is only used by kmeans')
 parser.add_argument('algo', metavar='algoritm',
                     help='Clustering algoritm to use',
                     choices=['kmeans', 'meanshift', 'dbscan', 'hdbscan'])
@@ -37,7 +39,7 @@ with open("positions.txt") as f:
 
 if args.algo == 'kmeans' or args.algo == 'meanshift':
     if args.algo == 'kmeans':
-        fitted_algoritm = create_clusters(lines, cluster.KMeans, (), {'n_clusters':3})
+        fitted_algoritm = create_clusters(lines,cluster.KMeans,(),{'n_clusters':int(args.clusters)})
     else:
         fitted_algoritm = create_clusters(lines, cluster.MeanShift, (), {})
     cluster_centers = np.array(fitted_algoritm.cluster_centers_)
