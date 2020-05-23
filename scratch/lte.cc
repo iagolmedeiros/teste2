@@ -151,7 +151,7 @@ void save_user_positions(NodeContainer nodes, std::vector<Vector2D> predicted_co
         Vector pos = mob->GetPosition();
 		coords = predicted_coords[i];
         pos_file << coords.x << " " << coords.y << " " << pos.z << "\n";
-    }   
+    }
     pos_file.close();
 }
 
@@ -498,7 +498,7 @@ int main(int argc, char* argv[])
 
     ns3::RngSeedManager::SetSeed(seedValue); //valor de seed para geração de números aleatórios
 	ns3_dir = GetTopLevelSourceDir();
-    
+
 	if (useCa) {
         Config::SetDefault("ns3::LteHelper::UseCa", BooleanValue(useCa));
         Config::SetDefault("ns3::LteHelper::NumberOfComponentCarriers", UintegerValue(2));
@@ -521,7 +521,7 @@ int main(int argc, char* argv[])
 	lteHelper->SetPathlossModelAttribute ("ShadowSigmaExtWalls", DoubleValue (0));
 	lteHelper->SetPathlossModelAttribute ("ShadowSigmaOutdoor", DoubleValue (3.0));
 	lteHelper->SetPathlossModelAttribute ("Los2NlosThr", DoubleValue (200));
-    
+
 	NodeContainer remoteHostContainer;
     remoteHostContainer.Create(node_remote);
     Ptr<Node> remoteHost = remoteHostContainer.Get(0);
@@ -561,14 +561,14 @@ int main(int argc, char* argv[])
 
     internet.Install(ueNodes);
 	internet.Install(carNodes);
-    
+
     MobilityHelper mobility;
     mobility.SetMobilityModel("ns3::ConstantPositionMobilityModel");
     mobility.Install(remoteHost);
     mobility.Install(pgw);
 	BuildingsHelper::Install (remoteHost);
 	BuildingsHelper::Install (pgw);
-    
+
 	MobilityHelper UAVmobility;
     UAVmobility.SetMobilityModel("ns3::WaypointMobilityModel");
     UAVmobility.Install(UAVNodes);
@@ -623,7 +623,7 @@ int main(int argc, char* argv[])
 	lteHelper->SetEnbDeviceAttribute ("DlBandwidth", UintegerValue (25)); //Set Download BandWidth
 	lteHelper->SetEnbDeviceAttribute ("UlBandwidth", UintegerValue (25)); //Set Upload Bandwidth
     enbDevs = lteHelper->InstallEnbDevice(UAVNodes);
-    
+
 	ueDevs = lteHelper->InstallUeDevice(ueNodes);
 	carDevs = lteHelper->InstallUeDevice(carNodes);
 
@@ -649,8 +649,19 @@ int main(int argc, char* argv[])
 	Ptr<Ipv4StaticRouting> sgwStaticRouting = ipv4RoutingHelper.GetStaticRouting(sgwIpv4);
 	sgwStaticRouting->AddNetworkRouteTo(Ipv4Address("1.0.0.0"), Ipv4Mask("255.0.0.0"), 1);
 
-	//Setup Applications
-	UDPApp(remoteHost, NodeContainer(ueNodes, carNodes));
+
+	//*********** CONFIGURAÇÃO LTE ***************//
+	    // Bandwidth of Dl and Ul in Resource Blocks
+	    Config::SetDefault("ns3::LteEnbNetDevice::DlBandwidth", UintegerValue(25));
+	    Config::SetDefault("ns3::LteEnbNetDevice::UlBandwidth", UintegerValue(25));
+
+	    // Modo de transmissão (SISO [0], MIMO [1])
+	    Config::SetDefault("ns3::LteEnbRrc::DefaultTransmissionMode",
+	        UintegerValue(0));
+
+
+			//Setup Applications
+			UDPApp(remoteHost, NodeContainer(ueNodes, carNodes));
 
     for (uint32_t i = 0; i < UAVNodes.GetN(); ++i) {
         request_video(UAVNodes.Get(i), remoteHost);
@@ -775,4 +786,3 @@ int main(int argc, char* argv[])
 
     return 0;
 }
-
