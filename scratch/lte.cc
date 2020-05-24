@@ -470,7 +470,7 @@ int main(int argc, char* argv[])
 	uint32_t numCars = 10;
     uint32_t seedValue = 10000;
     uint32_t SimTime = 85;
-    int eNodeBTxPower = 23;
+    int eNodeBTxPower = 15;
 
     uint16_t node_remote = 1; // HOST_REMOTO
     CommandLine cmd;
