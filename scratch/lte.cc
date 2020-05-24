@@ -466,8 +466,8 @@ int main(int argc, char* argv[])
 {
     bool useCa = false;
     uint32_t numUAVs = 3;
-    uint32_t numUes = 75;
-	uint32_t numCars = 10;
+    uint32_t numUes = 45;
+	uint32_t numCars = 40;
     uint32_t seedValue = 10000;
     uint32_t SimTime = 85;
     int eNodeBTxPower = 15;
