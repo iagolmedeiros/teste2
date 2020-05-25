@@ -594,7 +594,7 @@ int main(int argc, char* argv[])
 	waypointAllocator->SetAttribute ("Z", PointerValue (Z));
 
 	mobility.SetMobilityModel("ns3::RandomWaypointMobilityModel",
-		"Speed", StringValue("ns3::UniformRandomVariable[Min=30|Max=60]"),
+		"Speed", StringValue("ns3::UniformRandomVariable[Min=5|Max=12]"),
 		"PositionAllocator", PointerValue (waypointAllocator));
 	mobility.SetPositionAllocator("ns3::RandomDiscPositionAllocator",
         "X", DoubleValue(500), // The x coordinate of the center of the random position disc.
