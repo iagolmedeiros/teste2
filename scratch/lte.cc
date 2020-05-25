@@ -275,7 +275,7 @@ void send_drones_to_cluster_centers(NodeContainer nodes, NodeContainer drones) {
 		center = closest_center(*drone, centers);
 		erase_position = find_center(center, centers);
 		centers.erase(erase_position);
-        move_drones(*drone, center, 20);
+        move_drones(*drone, center, 5);
     }
 
     // repeat
