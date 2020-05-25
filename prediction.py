@@ -9,7 +9,7 @@ import math
 import argparse
 from collections import namedtuple
 
-seconds_to_predict = 5
+seconds_to_predict = 2
 order = 0,1,1
 #print(order)
 def arima(observations):
